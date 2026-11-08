@@ -11,6 +11,7 @@ import { PortalProvider, usePortal, useTypeWords } from '@/lib/portal';
 import { title } from '@/lib/format';
 import { NAV_GROUPS, mobileNav, visibleNav } from './portal-nav';
 import { NotificationBell } from './notification-bell';
+import { AlertCenter } from './alert-center';
 import { Badge, Button, ErrorState, cx } from '@/components/ui/primitives';
 
 /**
@@ -133,8 +134,12 @@ function ShellInner({ children }: { children: ReactNode }) {
         </div>
       )}
       <ActivityBar />
+      {/* Pop-up alerts for bookings, orders and emergencies; the bell keeps the history. */}
+      <AlertCenter />
       <div className="flex h-full min-w-0 flex-1 flex-col">
-        <header className="flex h-[72px] shrink-0 items-center gap-3 border-b border-grey-200 bg-paper/90 px-4 backdrop-blur lg:h-16 lg:px-8">
+        {/* `relative z-40`: backdrop-blur gives the header its own stacking context, so without an explicit z-index its
+            dropdowns (notifications, account menu) paint beneath the page content that follows it in the DOM. */}
+        <header className="relative z-40 flex h-[72px] shrink-0 items-center gap-3 border-b border-grey-200 bg-paper/90 px-4 backdrop-blur lg:h-16 lg:px-8">
           <button className="-ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg hover:bg-grey-100 lg:hidden" aria-label="Open menu" onClick={() => setOpen(true)}><Menu size={20} /></button>
           <Logo size="nav" className="shrink-0 rounded-lg lg:hidden" />
           <div className="min-w-0 flex-1">
