@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { AlertTriangle, ArrowRight, BadgeCheck, CalendarCheck, CheckCircle2, Clock, FlaskConical, IndianRupee, Package, Star, Users } from 'lucide-react';
 import { useOrg, usePortal, useTypeWords } from '@/lib/portal';
-import { useAuth } from '@/lib/auth';
 import { useGet } from '@/lib/hooks';
 import { count, money, nowMs, pct, title } from '@/lib/format';
 import type { ReactNode } from 'react';
@@ -21,7 +20,6 @@ interface Summary { balanceMinor: number; unsettledMinor: number; period: { gros
 export default function HomePage() {
   const org = useOrg();
   const { can } = usePortal();
-  const { me } = useAuth();
   const words = useTypeWords(org.type);
   const base = `/portal/providers/${org.providerId}`;
   const isClinical = ['DOCTOR', 'HOSPITAL', 'CLINIC'].includes(org.type);
@@ -30,7 +28,6 @@ export default function HomePage() {
   const verification = useGet<Verification>(`${base}/verification`);
   const today = useGet<Appointment[]>(isClinical && can('manage_bookings') ? `${base}/appointments-today` : null);
   const finance = useGet<Summary>(can('view_finance') ? `${base}/finance/summary` : null);
-  const firstName = me?.fullName.split(' ')[0] ?? 'there';
   const a = analytics.data;
   const v = verification.data;
   const todoCount = v?.checks.reduce((s, c) => s + c.todo.length, 0) ?? 0;
@@ -39,9 +36,8 @@ export default function HomePage() {
   return (
     <div className="space-y-4">
       <section className="rounded-lg bg-ink p-5 text-paper lg:p-6">
-        <p className="text-sm text-grey-300">Good {greeting(nowMs())}, {firstName}</p>
-        <h1 className="mt-1 text-xl font-bold lg:text-2xl">{org.displayName}</h1>
-        <p className="mt-1 text-sm text-grey-300">{title(org.type)} · you are {title(org.memberRole).toLowerCase()}</p>
+        <h1 className="text-xl font-bold lg:text-2xl">Good {greeting(nowMs())}, {org.displayName}</h1>
+        <p className="mt-1 text-sm text-grey-300">{[org.specialities?.[0], title(org.type), `you are ${title(org.memberRole).toLowerCase()}`].filter(Boolean).join(' · ')}</p>
         <div className="stagger mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <HeroStat icon={CalendarCheck} label={isClinical ? 'Appointments Today' : isLab ? 'Open Orders' : org.type === 'PHARMACY' ? 'Open Orders' : 'Upcoming'} value={isClinical ? (today.isPending && can('manage_bookings') ? null : count(liveToday.length)) : isLab ? (a ? count(sum(a.diagnosticOrders, ['REQUESTED', 'CONFIRMED', 'SAMPLE_COLLECTED', 'PROCESSING'])) : null) : org.type === 'PHARMACY' ? (a ? count(sum(a.pharmacyOrders, ['PLACED', 'PRESCRIPTION_REVIEW', 'ACCEPTED', 'PREPARING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY'])) : null) : (a ? count(a.appointments.upcoming) : null)} />
           <HeroStat icon={CheckCircle2} label="Completion · 30 Days" value={a ? (a.appointments.completionRate == null ? pct(null) : <CountUp value={a.appointments.completionRate} format={(n) => pct(Math.round(n * 10) / 10)} />) : null} />
@@ -70,7 +66,7 @@ export default function HomePage() {
                   {today.data!.slice(0, 8).map((x) => (
                     <li key={x.id}>
                       <Link href={`/appointments/${x.id}`} className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 py-2.5 first:pt-0 hover:bg-grey-50">
-                        <span className="tnum w-14 shrink-0 text-sm font-semibold">{new Date(x.startsAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}</span>
+                        <span className="tnum w-[4.5rem] shrink-0 text-sm font-semibold whitespace-nowrap">{new Date(x.startsAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}</span>
                         <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{x.patient.fullName}</span><span className="block truncate text-xs text-grey-500">{org.type === 'DOCTOR' ? x.location?.name ?? '' : x.doctor.displayName}{x.location && org.type !== 'DOCTOR' ? ` · ${x.location.name}` : ''}</span></span>
                         <span className="shrink-0"><Badge>{x.status}</Badge></span>
                       </Link>

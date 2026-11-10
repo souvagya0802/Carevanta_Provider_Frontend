@@ -124,7 +124,7 @@ function AppointmentsInner() {
                 <ul className="divide-y divide-grey-100">
                   {rows.map((a) => (
                     <li key={a.id} className={cx('flex flex-wrap items-center gap-x-3 gap-y-2 py-3', !LIVE.includes(a.status) && 'opacity-60')}>
-                      <span className="tnum w-16 shrink-0 text-base font-semibold">{new Date(a.startsAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}</span>
+                      <span className="tnum w-[4.75rem] shrink-0 text-base font-semibold whitespace-nowrap">{new Date(a.startsAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}</span>
                       <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{a.patient.fullName}</span><span className="block truncate text-xs text-grey-500">{org.type === 'DOCTOR' ? `${a.facility.displayName}` : a.doctor.displayName}{a.location ? ` · ${a.location.name}` : ''} · {money(a.feeMinor)}</span></span>
                       <span className="shrink-0"><Badge>{a.status}</Badge></span>
                       <span className="flex shrink-0 gap-1">

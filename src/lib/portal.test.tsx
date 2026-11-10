@@ -7,8 +7,8 @@ import { PortalProvider, usePortal, type Membership } from './portal';
 const me = { id: 'u1', fullName: 'Owner', email: 'o@x', phone: null, status: 'ACTIVE', mustChangePassword: false, roles: [] as string[], permissions: [] as string[] };
 vi.mock('./auth', () => ({ useAuth: () => ({ me }) }));
 
-const hospital: Membership = { providerId: 'h1', displayName: 'Tamluk General', type: 'HOSPITAL', status: 'APPROVED', isListed: true, memberRole: 'OWNER', capabilities: ['manage_profile', 'manage_staff', 'view_finance'], joinedAt: null };
-const practice: Membership = { providerId: 'd1', displayName: 'Dr. Sen', type: 'DOCTOR', status: 'APPROVED', isListed: true, memberRole: 'OWNER', capabilities: ['manage_profile', 'manage_schedules'], joinedAt: null };
+const hospital: Membership = { providerId: 'h1', displayName: 'Tamluk General', type: 'HOSPITAL', status: 'APPROVED', isListed: true, memberRole: 'OWNER', capabilities: ['manage_profile', 'manage_staff', 'view_finance'], joinedAt: null, specialities: [] };
+const practice: Membership = { providerId: 'd1', displayName: 'Dr. Sen', type: 'DOCTOR', status: 'APPROVED', isListed: true, memberRole: 'OWNER', capabilities: ['manage_profile', 'manage_schedules'], joinedAt: null, specialities: [] };
 
 const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
 

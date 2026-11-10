@@ -13,6 +13,9 @@ export const pct = (v: number | null | undefined) => (v == null ? '—' : `${v}%
 /** Title Case for enum-like values: `PENDING_VERIFICATION` → `Pending Verification`. */
 export const title = (s: string | null | undefined) =>
   s ? s.toLowerCase().replace(/_/g, ' ').replace(/(^|\s)\w/g, (c) => c.toUpperCase()) : '—';
+/** Title Case for free text that already has its own casing: `Retail drug licence (Form 20/21)` → `Retail Drug Licence (Form 20/21)`. */
+export const titleCase = (s: string | null | undefined) =>
+  s ? s.replace(/(^|[\s(/-])([a-z])/g, (_m, p: string, c: string) => p + c.toUpperCase()) : '—';
 export const short = (id: string | null | undefined) => (id ? id.slice(0, 8) : '—');
 export const minutes = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 export const relative = (iso: string | null | undefined) => {

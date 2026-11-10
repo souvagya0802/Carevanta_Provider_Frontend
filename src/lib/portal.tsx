@@ -24,6 +24,8 @@ export interface Membership {
   memberRole: string;
   capabilities: string[];
   joinedAt: string | null;
+  /** Doctor practices only: speciality names, primary first. Empty for facilities. */
+  specialities: string[];
 }
 interface PortalMe { memberships: Membership[]; ownDoctorProviderId: string | null }
 

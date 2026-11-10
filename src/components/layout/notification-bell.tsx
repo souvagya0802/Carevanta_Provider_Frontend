@@ -43,7 +43,7 @@ export function NotificationBell() {
           <ul className="max-h-80 divide-y divide-grey-100 overflow-y-auto">
             {items.map((n) => (
               <li key={n.id}>
-                <button type="button" onClick={() => open.mutate(n)} className={cx('flex w-full items-start gap-2 rounded-lg px-2 py-2 text-left hover:bg-grey-50', !n.readAt && 'bg-blue-soft/60')}>
+                <button type="button" onClick={() => open.mutate(n)} className={cx('flex min-h-10 w-full items-start gap-2 rounded-lg px-2 py-2 text-left hover:bg-grey-50', !n.readAt && 'bg-blue-soft/60')}>
                   <span className={cx('mt-1.5 h-2 w-2 shrink-0 rounded-full', n.readAt ? 'bg-transparent' : 'bg-blue')} aria-hidden />
                   <span className="min-w-0 flex-1">
                     <span className={cx('block truncate', !n.readAt && 'font-semibold')}>{n.title ?? 'Notification'}</span>

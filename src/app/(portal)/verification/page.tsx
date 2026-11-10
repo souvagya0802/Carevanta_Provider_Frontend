@@ -5,7 +5,7 @@ import { AlertTriangle, BadgeCheck, CheckCircle2, Clock, FileUp, Send, XCircle }
 import { useOrg, usePortal } from '@/lib/portal';
 import { api } from '@/lib/api';
 import { useAction, useGet } from '@/lib/hooks';
-import { title } from '@/lib/format';
+import { title, titleCase } from '@/lib/format';
 import { Badge, Button, Card, ConfirmDialog, ErrorState, PageHeader, Skeleton, cx } from '@/components/ui/primitives';
 import { useState } from 'react';
 
@@ -63,7 +63,7 @@ export default function VerificationPage() {
           const tone = c.status === 'PASSED' ? 'green' : c.status === 'FAILED' ? 'red' : c.status === 'WAIVED' ? 'blue' : 'orange';
           return (
             <Card key={c.checkType} title={title(c.checkType)} description={CHECK_HELP[c.checkType]} actions={<span className="flex items-center gap-1"><Badge accent={tone}>{c.status === 'PENDING' ? 'To Do' : title(c.status)}</Badge>{!c.isRequired && <Badge>Optional</Badge>}</span>}>
-              {c.identifiers.length > 0 && <dl className="space-y-1 text-sm">{c.identifiers.map((i) => <div key={i.label + i.value} className="flex justify-between gap-3"><dt className="text-grey-500">{i.label}</dt><dd className="text-right font-medium break-all">{i.value}</dd></div>)}</dl>}
+              {c.identifiers.length > 0 && <dl className="space-y-1 text-sm">{c.identifiers.map((i) => <div key={i.label + i.value} className="flex justify-between gap-3"><dt className="text-grey-500">{titleCase(i.label)}</dt><dd className="text-right font-medium break-all">{i.value}</dd></div>)}</dl>}
               {c.evidence.length > 0 && (
                 <ul className="mt-3 space-y-1.5 text-sm">
                   {c.evidence.map((e) => (

@@ -76,7 +76,9 @@ export function DataTable<T extends { id: string }>({ path, params = {}, columns
       ) : data.length === 0 ? (
         <EmptyState title={emptyTitle} description={query.data?.page.hasMore ? 'Nothing on this page matches. Use Next to look further.' : emptyDescription} />
       ) : (
-        <div className={cx('animate-fade-in overflow-x-auto rounded-lg border border-grey-200 transition-opacity duration-200', query.isFetching && 'opacity-60')}>
+        /* `relative`: the scroll box must be the containing block of absolutely positioned cells (the `sr-only` Actions
+            header), otherwise they escape the clip and make the whole page scroll sideways on phones. */
+        <div className={cx('animate-fade-in relative overflow-x-auto rounded-lg border border-grey-200 transition-opacity duration-200', query.isFetching && 'opacity-60')}>
           <table className="w-full min-w-[640px] text-sm">
             <thead className="bg-grey-50 text-left text-xs uppercase tracking-wide text-grey-600">
               {table.getHeaderGroups().map((hg) => (

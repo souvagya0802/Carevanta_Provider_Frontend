@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fromIstInput, toIstInput } from './format';
+import { fromIstInput, titleCase, toIstInput } from './format';
 
 describe('IST datetime-local helpers', () => {
   it('shows an instant as IST wall-clock time', () => {
@@ -16,5 +16,14 @@ describe('IST datetime-local helpers', () => {
   it('rejects empty or malformed values', () => {
     expect(fromIstInput('')).toBeNull();
     expect(fromIstInput('2026-11-08')).toBeNull();
+  });
+});
+
+describe('titleCase', () => {
+  it('capitalises each word and keeps existing capitals and codes', () => {
+    expect(titleCase('Retail drug licence (Form 20/21)')).toBe('Retail Drug Licence (Form 20/21)');
+    expect(titleCase('Pharmacy Council registration')).toBe('Pharmacy Council Registration');
+    expect(titleCase('payout accounts')).toBe('Payout Accounts');
+    expect(titleCase(null)).toBe('—');
   });
 });

@@ -35,7 +35,8 @@ export default function ServicesPage() {
           <ul className="divide-y divide-grey-100">
             {rows.map((o) => (
               <li key={o.id} className={cx('flex flex-wrap items-center gap-3 px-5 py-3', !o.isActive && 'opacity-60')}>
-                <div className="min-w-0 flex-1"><p className="text-sm font-medium">{o.serviceName}</p><p className="text-xs text-grey-500">{title(o.category)}{o.locationName ? ` · ${o.locationName}` : ' · all locations'}{o.turnaroundHours ? ` · report in ${o.turnaroundHours} h` : ''}</p></div>
+                {/* A minimum width keeps the name readable on phones: the badges, price and button wrap below instead of squeezing it. */}
+                <div className="min-w-[12rem] flex-1"><p className="text-sm font-medium">{o.serviceName}</p><p className="text-xs text-grey-500">{title(o.category)}{o.locationName ? ` · ${o.locationName}` : ' · all locations'}{o.turnaroundHours ? ` · report in ${o.turnaroundHours} h` : ''}</p></div>
                 <span className="flex flex-wrap items-center gap-1">{o.requiresPrescription && <Badge accent="orange">Rx Needed</Badge>}{o.homeServiceAvailable && <Badge accent="blue"><Home size={10} className="mr-1 inline" aria-hidden />Home</Badge>}{!o.isActive && <Badge>Hidden</Badge>}</span>
                 <span className="tnum w-24 text-right text-sm font-semibold">{money(o.priceMinor)}</span>
                 {editable && <Button size="sm" variant="ghost" onClick={() => setEditing(o)}>Edit</Button>}

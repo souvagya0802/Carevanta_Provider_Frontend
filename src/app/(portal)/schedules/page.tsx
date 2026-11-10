@@ -86,7 +86,7 @@ function SchedulesInner() {
             {schedules.data.map((s) => (
               <li key={s.id} className={cx('flex flex-wrap items-center gap-3 py-2.5', !s.isActive && 'opacity-60')}>
                 <span className="w-10 shrink-0 text-sm font-semibold">{DAYS[s.dayOfWeek]}</span>
-                <span className="min-w-0 flex-1 text-sm"><span className="tnum font-medium">{toTime(s.startMinute)}–{toTime(s.endMinute)}</span> · {s.slotMinutes} min · {s.capacityPerSlot} per slot · {money(s.feeMinor)}<span className="block text-xs text-grey-500">{s.locationName} · from {s.validFrom}{s.validTo ? ` to ${s.validTo}` : ''}</span></span>
+                <span className="min-w-[12rem] flex-1 text-sm"><span className="tnum font-medium">{toTime(s.startMinute)}–{toTime(s.endMinute)}</span> · {s.slotMinutes} min · {s.capacityPerSlot} per slot · {money(s.feeMinor)}<span className="block text-xs text-grey-500">{s.locationName} · from {s.validFrom}{s.validTo ? ` to ${s.validTo}` : ''}</span></span>
                 {!s.isActive ? <Badge>Stopped</Badge> : <span className="flex gap-1"><Button size="sm" variant="secondary" onClick={() => setGenerating(s)}><CalendarPlus size={14} /> Generate Slots</Button><Button size="sm" variant="ghost" className="text-red" onClick={() => setStopping(s)}>Stop</Button></span>}
               </li>
             ))}
