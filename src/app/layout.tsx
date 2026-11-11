@@ -3,11 +3,11 @@ import './globals.css';
 import { AppProviders } from '@/lib/providers';
 
 export const metadata: Metadata = {
-  title: { default: 'Carevanta Provider Portal', template: '%s · Carevanta Provider Portal' },
+  title: { default: 'Carevanta Provider', template: '%s · Carevanta Provider' },
   description: 'Manage your hospital, clinic, laboratory, pharmacy, ambulance service or practice on Carevanta',
   robots: { index: false, follow: false },
-  applicationName: 'Carevanta Provider Portal',
-  appleWebApp: { capable: true, statusBarStyle: 'black', title: 'Carevanta' },
+  applicationName: 'Carevanta Provider',
+  appleWebApp: { capable: true, statusBarStyle: 'black', title: 'Carevanta Provider' },
   icons: { icon: '/icon-192.png', apple: '/icon-192.png' },
 };
 

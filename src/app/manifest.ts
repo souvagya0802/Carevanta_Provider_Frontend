@@ -7,8 +7,9 @@ import type { MetadataRoute } from 'next';
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Carevanta Provider Portal',
-    short_name: 'Carevanta',
+    // The name under the icon on the phone. Kept distinct from the patient app ("Carevanta") and the admin app ("Carevanta Admin").
+    name: 'Carevanta Provider',
+    short_name: 'Carevanta Provider',
     description: 'Run your hospital, clinic, laboratory, pharmacy, ambulance service or practice on Carevanta.',
     start_url: '/?source=pwa',
     scope: '/',
