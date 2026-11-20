@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Banknote, IndianRupee, Printer, Receipt, Wallet } from 'lucide-react';
+import { Banknote, FileText, IndianRupee, Printer, Receipt, Wallet } from 'lucide-react';
 import { useOrg } from '@/lib/portal';
 import { api } from '@/lib/api';
 import { useAction, useGet } from '@/lib/hooks';
@@ -10,13 +10,15 @@ import { count, date, dateTime, money, title } from '@/lib/format';
 import { DataTable } from '@/components/ui/data-table';
 import { Badge, Button, Card, Dialog, ErrorState, Field, Input, PageHeader, Skeleton, Tabs, Textarea, cx } from '@/components/ui/primitives';
 import { useToast } from '@/components/ui/toast';
+import { LazyInvoiceButtons, ProviderInvoices, SettlementDocuments } from '@/components/invoices';
 import { RequireCapability } from '@/components/layout/portal-shell';
 import { openPrintWindow, printDocument, type PrintDoc, type PrintLine } from '@/lib/print';
 
 interface Summary { balanceMinor: number; unsettledMinor: number; period: { from: string; to: string; grossMinor: number; refundedMinor: number; commissionMinor: number; completedTransactions: number }; lastPayout: { amountMinor: number; paidAt: string | null; reference: string | null } | null }
 interface Txn { id: string; reference: string; sourceType: string; sourceId?: string | null; category: string; grossMinor: number; refundedMinor: number; status: string; attribution: string; commissionEligible: boolean; eligibilityReason: string | null; serviceCompletedAt: string | null; createdAt: string }
 interface Ledger { id: string; entryType: string; amountMinor: number; transactionId: string | null; settlementItemId: string | null; description: string | null; createdAt: string }
-interface Payout { id: string; batchReference: string; batchStatus: string; periodEnd: string; amountMinor: number; status: string; payoutReference: string | null; paidAt: string | null; failureReason: string | null; createdAt: string }
+/** `batchId` is needed for the batch documents (commission invoice, statement); the buttons hide while the API does not send it. */
+interface Payout { id: string; batchId?: string | null; batchReference: string; batchStatus: string; periodEnd: string; amountMinor: number; status: string; payoutReference: string | null; paidAt: string | null; failureReason: string | null; createdAt: string }
 
 /** Statuses where money has been received, so a receipt makes sense. */
 const RECEIPT_STATUSES = ['PAID', 'PARTIALLY_REFUNDED', 'REFUNDED'];
@@ -68,7 +70,7 @@ function Inner() {
   const org = useOrg();
   const base = `/portal/providers/${org.providerId}`;
   const summary = useGet<Summary>(`${base}/finance/summary`);
-  const [tab, setTab] = useState<'transactions' | 'ledger' | 'payouts'>('transactions');
+  const [tab, setTab] = useState<'transactions' | 'ledger' | 'payouts' | 'invoices'>('transactions');
   const [refund, setRefund] = useState<Txn | null>(null);
   const [refundForm, setRefundForm] = useState({ reason: '', amount: '' });
   const toast = useToast();
@@ -92,7 +94,7 @@ function Inner() {
     { header: 'Refunded', cell: ({ row }) => <span className="tnum text-grey-600">{row.original.refundedMinor ? money(row.original.refundedMinor) : '—'}</span> },
     { header: 'Status', cell: ({ row }) => <Badge>{row.original.status}</Badge> },
     { header: 'Platform Fee', cell: ({ row }) => <span className="text-xs">{row.original.commissionEligible ? <Badge accent="blue">Applies</Badge> : <span className="text-grey-500" title={row.original.eligibilityReason ?? undefined}>None{row.original.attribution === 'PROVIDER_DIRECT' ? ' · walk-in' : ''}</span>}</span> },
-    { id: 'actions', header: () => <span className="sr-only">Actions</span>, cell: ({ row }) => <span className="flex flex-wrap justify-end gap-1"><Button size="sm" variant="ghost" onClick={() => print('Invoice', row.original)}><Printer size={14} /> Print Invoice</Button>{(RECEIPT_STATUSES.includes(row.original.status) || (row.original.status === 'PAY_AT_PROVIDER' && !!row.original.serviceCompletedAt)) && <Button size="sm" variant="ghost" onClick={() => print('Receipt', row.original)}><Printer size={14} /> Print Receipt</Button>}{(row.original.status === 'PAID' || row.original.status === 'PARTIALLY_REFUNDED') && <Button size="sm" variant="ghost" onClick={() => setRefund(row.original)}>Request Refund</Button>}</span> },
+    { id: 'actions', header: () => <span className="sr-only">Actions</span>, cell: ({ row }) => <span className="flex flex-wrap justify-end gap-1">{RECEIPT_STATUSES.includes(row.original.status) ? <LazyInvoiceButtons listPath={`${base}/transactions/${row.original.id}/invoices`} kinds={row.original.refundedMinor ? ['TAX_INVOICE', 'CREDIT_NOTE'] : ['TAX_INVOICE']} /> : row.original.status === 'PENDING_PAYMENT' ? <Button size="sm" variant="ghost" className="h-11 sm:h-8" disabled title="Available after payment"><FileText size={14} aria-hidden /> Download Invoice</Button> : null}<Button size="sm" variant="ghost" onClick={() => print('Invoice', row.original)}><Printer size={14} /> Print Invoice</Button>{(RECEIPT_STATUSES.includes(row.original.status) || (row.original.status === 'PAY_AT_PROVIDER' && !!row.original.serviceCompletedAt)) && <Button size="sm" variant="ghost" onClick={() => print('Receipt', row.original)}><Printer size={14} /> Print Receipt</Button>}{(row.original.status === 'PAID' || row.original.status === 'PARTIALLY_REFUNDED') && <Button size="sm" variant="ghost" onClick={() => setRefund(row.original)}>Request Refund</Button>}</span> },
   ];
   const ledgerColumns: ColumnDef<Ledger, unknown>[] = [
     { header: 'When', cell: ({ row }) => <span className="text-xs">{dateTime(row.original.createdAt)}</span> },
@@ -105,6 +107,7 @@ function Inner() {
     { header: 'Amount', cell: ({ row }) => <span className="tnum font-medium">{money(row.original.amountMinor)}</span> },
     { header: 'Status', cell: ({ row }) => <div><Badge>{row.original.status}</Badge>{row.original.failureReason && <p className="text-xs text-red">{row.original.failureReason}</p>}</div> },
     { header: 'Paid', cell: ({ row }) => <span className="text-xs">{row.original.paidAt ? `${dateTime(row.original.paidAt)}${row.original.payoutReference ? ` · UTR ${row.original.payoutReference}` : ''}` : '—'}</span> },
+    { id: 'documents', header: () => <span className="sr-only">Documents</span>, cell: ({ row }) => ['APPROVED', 'PROCESSING', 'COMPLETED', 'PARTIALLY_FAILED'].includes(row.original.batchStatus) ? <SettlementDocuments base={base} batchId={row.original.batchId} /> : <span className="text-xs text-grey-400" title="Issued when the payout batch is approved">After approval</span> },
   ];
 
   return (
@@ -118,12 +121,13 @@ function Inner() {
           <Tile icon={Banknote} label="Last Payout" value={s.lastPayout ? money(s.lastPayout.amountMinor) : '—'} sub={s.lastPayout ? `${dateTime(s.lastPayout.paidAt)}${s.lastPayout.reference ? ` · UTR ${s.lastPayout.reference}` : ''}` : 'No payout yet'} />
         </div>
       )}
-      <Tabs tabs={[{ key: 'transactions', label: 'Transactions' }, { key: 'ledger', label: 'Ledger' }, { key: 'payouts', label: 'Payouts' }]} active={tab} onChange={(k) => setTab(k as typeof tab)} />
+      <Tabs tabs={[{ key: 'transactions', label: 'Transactions' }, { key: 'ledger', label: 'Ledger' }, { key: 'payouts', label: 'Payouts' }, { key: 'invoices', label: 'Invoices' }]} active={tab} onChange={(k) => setTab(k as typeof tab)} />
       <Card padded={false}>
         <div className="p-5">
           {tab === 'transactions' && <DataTable<Txn> path={`${base}/finance/transactions`} columns={txnColumns} emptyTitle="No Transactions Yet" emptyDescription="Completed appointments and orders appear here." />}
           {tab === 'ledger' && <DataTable<Ledger> path={`${base}/finance/ledger`} columns={ledgerColumns} emptyTitle="No Ledger Entries Yet" emptyDescription="Entries are written when a service completes, a refund is processed or a payout is made." />}
           {tab === 'payouts' && <DataTable<Payout> path={`${base}/finance/settlements`} columns={payoutColumns} emptyTitle="No Payouts Yet" emptyDescription="Earnings are paid out after the settlement hold period, to the bank account verified on your profile." />}
+          {tab === 'invoices' && <ProviderInvoices base={base} />}
         </div>
       </Card>
       <p className="text-xs text-grey-500">Amounts are in rupees. The platform fee follows the agreement for your provider category; a copy is available from the platform team.</p>

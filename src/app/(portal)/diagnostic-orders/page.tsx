@@ -12,9 +12,10 @@ import { printDocument } from '@/lib/print';
 import { DataTable } from '@/components/ui/data-table';
 import { Badge, Button, Card, Dialog, ErrorState, Field, Input, PageHeader, Select, Skeleton, Tabs, Textarea } from '@/components/ui/primitives';
 import { useToast } from '@/components/ui/toast';
+import { InvoiceDownloads, type InvoiceMeta } from '@/components/invoices';
 import { RequireCapability } from '@/components/layout/portal-shell';
 
-interface Order { id: string; reference: string; status: string; patient: { id: string; fullName: string }; collectionMode: string; collectionPincode: string | null; scheduledAt: string | null; totalMinor: number; statusReason: string | null; items: { id: string; serviceName: string; priceMinor: number }[]; reports: { id: string; version: number; status: string; publishedAt: string | null; correctionReason: string | null }[]; transaction: { id: string; status: string; reference: string } | null; createdAt: string }
+interface Order { id: string; reference: string; status: string; patient: { id: string; fullName: string }; collectionMode: string; collectionPincode: string | null; scheduledAt: string | null; totalMinor: number; statusReason: string | null; items: { id: string; serviceName: string; priceMinor: number }[]; reports: { id: string; version: number; status: string; publishedAt: string | null; correctionReason: string | null }[]; transaction: { id: string; status: string; reference: string } | null; createdAt: string; invoices?: InvoiceMeta[] }
 
 const STATUSES = ['REQUESTED', 'CONFIRMED', 'SAMPLE_COLLECTED', 'PROCESSING', 'REPORT_READY', 'COMPLETED', 'CANCELLED', 'REJECTED'];
 /** The Open tab: the API filters by one status at a time, so the open set is kept on the page. */
@@ -105,6 +106,7 @@ function OrderDialog({ base, id, onClose }: { base: string; id: string; onClose:
       {order.isPending ? <Skeleton rows={6} /> : order.isError || !o ? <ErrorState error={order.error} retry={() => order.refetch()} /> : (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2"><Badge>{o.status}</Badge>{o.transaction && <Badge accent={o.transaction.status === 'PAID' ? 'green' : 'orange'}>Payment {title(o.transaction.status)}</Badge>}{o.statusReason && <span className="text-xs text-grey-600">{o.statusReason}</span>}</div>
+          <InvoiceDownloads base={base} transaction={o.transaction} invoices={o.invoices} />
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wide text-grey-500">Tests</h3>

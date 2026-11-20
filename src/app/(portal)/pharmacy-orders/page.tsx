@@ -13,9 +13,10 @@ import { PrescriptionFile } from '@/components/prescription-file';
 import { DataTable } from '@/components/ui/data-table';
 import { Badge, Button, Card, Dialog, ErrorState, Field, PageHeader, Select, Skeleton, Tabs, Textarea } from '@/components/ui/primitives';
 import { useToast } from '@/components/ui/toast';
+import { InvoiceDownloads, type InvoiceMeta } from '@/components/invoices';
 import { RequireCapability } from '@/components/layout/portal-shell';
 
-interface Order { id: string; reference: string; status: string; patient: { id: string; fullName: string }; fulfilment: string; deliveryPincode: string | null; prescriptionId: string | null; totalMinor: number; statusReason: string | null; items: { id: string; medicine: { name: string; strength: string | null; schedule: string }; batchNumber: string | null; expiryDate: string | null; quantity: number; unitPriceMinor: number }[]; transaction: { id: string; status: string } | null; createdAt: string }
+interface Order { id: string; reference: string; status: string; patient: { id: string; fullName: string }; fulfilment: string; deliveryPincode: string | null; prescriptionId: string | null; totalMinor: number; statusReason: string | null; items: { id: string; medicine: { name: string; strength: string | null; schedule: string }; batchNumber: string | null; expiryDate: string | null; quantity: number; unitPriceMinor: number }[]; transaction: { id: string; status: string } | null; createdAt: string; invoices?: InvoiceMeta[] }
 
 const STATUSES = ['PLACED', 'PRESCRIPTION_REVIEW', 'ACCEPTED', 'PREPARING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'REJECTED', 'CANCELLED', 'RETURNED'];
 /** The Open tab: the API filters by one status at a time, so the open set is kept on the page. */
@@ -93,6 +94,7 @@ function OrderDialog({ base, id, onClose }: { base: string; id: string; onClose:
       {order.isPending ? <Skeleton rows={6} /> : order.isError || !o ? <ErrorState error={order.error} retry={() => order.refetch()} /> : (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2"><Badge>{o.status}</Badge>{o.transaction && <Badge accent={o.transaction.status === 'PAID' ? 'green' : 'orange'}>Payment {title(o.transaction.status)}</Badge>}{o.statusReason && <span className="text-xs text-grey-600">{o.statusReason}</span>}</div>
+          <InvoiceDownloads base={base} transaction={o.transaction} invoices={o.invoices} />
           {o.status === 'PRESCRIPTION_REVIEW' && <p className="rounded-lg border border-orange/30 bg-orange-soft p-3 text-xs text-grey-700">This order contains prescription-only medicines. A pharmacist must approve the prescription under Prescriptions before it can be accepted.</p>}
           {o.prescriptionId && can('review_prescriptions') && <div><h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-grey-500">Prescription</h3><PrescriptionFile providerId={org.providerId} prescriptionId={o.prescriptionId} /></div>}
           <table className="w-full text-sm">

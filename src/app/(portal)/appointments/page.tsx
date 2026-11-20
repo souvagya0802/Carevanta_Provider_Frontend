@@ -12,6 +12,7 @@ import { dateTime, money, nowMs, relative, title } from '@/lib/format';
 import { DataTable } from '@/components/ui/data-table';
 import { Badge, Button, Card, Dialog, ErrorState, Field, Input, PageHeader, Select, Skeleton, Tabs, Textarea, cx } from '@/components/ui/primitives';
 import { useToast } from '@/components/ui/toast';
+import { InvoiceDownloads, type InvoiceMeta } from '@/components/invoices';
 import { RequireCapability } from '@/components/layout/portal-shell';
 
 export interface Appt {
@@ -19,6 +20,8 @@ export interface Appt {
   patient: { id: string; fullName: string; relationship: string }; doctor: { id: string; displayName: string }; facility: { id: string; displayName: string; type: string }; location: { id: string; name: string; city: string } | null; department: { code: string; name: string } | null;
   startsAt: string; endsAt: string; feeMinor: number; statusReason: string | null; confirmedAt: string | null; checkedInAt: string | null; completedAt: string | null; cancelledAt: string | null;
   transaction: { id: string; reference: string; status: string } | null; version: number; createdAt: string;
+  /** Additive: invoices of the transaction, when the API includes them. */
+  invoices?: InvoiceMeta[];
   events?: { fromStatus: string | null; toStatus: string; actorKind: string; note: string | null; createdAt: string }[];
 }
 
@@ -308,6 +311,7 @@ export function AppointmentDialog({ base, id, orgType, onClose }: { base: string
             <div><dt className="text-xs text-grey-500">Booked</dt><dd>{relative(a.createdAt)} via {title(a.source)}</dd></div>
             {a.statusReason && <div className="sm:col-span-2"><dt className="text-xs text-grey-500">Latest Note</dt><dd>{a.statusReason}</dd></div>}
           </dl>
+          <InvoiceDownloads base={base} transaction={a.transaction} invoices={a.invoices} />
           {a.events && a.events.length > 0 && (
             <div><h3 className="text-xs font-semibold uppercase tracking-wide text-grey-500">History</h3><ul className="mt-1 divide-y divide-grey-100 text-xs">{a.events.map((e, i) => <li key={i} className="flex justify-between gap-2 py-1.5"><span>{e.fromStatus ? `${title(e.fromStatus)} → ` : ''}<span className="font-medium">{title(e.toStatus)}</span> · {e.actorKind.toLowerCase()}{e.note ? ` — ${e.note}` : ''}</span><span className="shrink-0 text-grey-500">{dateTime(e.createdAt)}</span></li>)}</ul></div>
           )}
