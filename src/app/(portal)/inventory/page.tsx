@@ -8,9 +8,10 @@ import { useAction, useDebounced, useGet } from '@/lib/hooks';
 import { date, money, nowMs } from '@/lib/format';
 import { Badge, Button, Card, Checkbox, Dialog, ErrorState, Field, Input, PageHeader, Select, Skeleton, Tabs, cx } from '@/components/ui/primitives';
 import { RequireCapability } from '@/components/layout/portal-shell';
+import { MedicineThumb, PhotoButton, photoOwnerOf, type PhotoOwner } from '@/components/inventory/medicine-photo';
 
-interface Batch { id: string; locationId: string; locationName: string; medicine: { id: string; name: string; strength: string | null; schedule: string; requiresPrescription: boolean }; batchNumber: string; expiryDate: string; quantityOnHand: number; quantityReserved: number; available: number; onShelf?: number; mrpMinor: number; sellingPriceMinor: number; expired: boolean; expiringSoon: boolean }
-interface Medicine { id: string; name: string; composition?: string | null; source?: string; genericName: string | null; strength: string | null; dosageForm: string | null; packSize: string | null; manufacturer: string | null; schedule: string; requiresPrescription: boolean }
+interface Batch { id: string; locationId: string; locationName: string; medicine: { id: string; name: string; strength: string | null; schedule: string; requiresPrescription: boolean; dosageForm?: string | null; imageUrl?: string | null; photoOwner?: PhotoOwner }; batchNumber: string; expiryDate: string; quantityOnHand: number; quantityReserved: number; available: number; onShelf?: number; mrpMinor: number; sellingPriceMinor: number; expired: boolean; expiringSoon: boolean }
+interface Medicine { id: string; name: string; composition?: string | null; source?: string; genericName: string | null; strength: string | null; dosageForm: string | null; packSize: string | null; manufacturer: string | null; schedule: string; requiresPrescription: boolean; imageUrl?: string | null; imageSource?: string | null; imageProviderId?: string | null }
 interface Location { id: string; name: string; isActive: boolean }
 
 export default function InventoryPage() {
@@ -45,7 +46,7 @@ function Inner() {
               <tbody>
                 {rows.map((b) => (
                   <tr key={b.id} className={cx('border-t border-grey-100', b.expired && 'bg-red-soft/40')}>
-                    <td className="px-4 py-2"><p className="font-medium">{b.medicine.name}{b.medicine.strength ? ` ${b.medicine.strength}` : ''}</p><p className="text-xs text-grey-500">{b.locationName}{b.medicine.requiresPrescription ? ' · Rx only' : ''}</p></td>
+                    <td className="px-4 py-2"><div className="flex items-center gap-3"><MedicineThumb imageUrl={b.medicine.imageUrl} dosageForm={b.medicine.dosageForm} name={b.medicine.name} /><div className="min-w-0"><p className="font-medium">{b.medicine.name}{b.medicine.strength ? ` ${b.medicine.strength}` : ''}</p><p className="text-xs text-grey-500">{b.locationName}{b.medicine.requiresPrescription ? ' · Rx only' : ''}</p></div></div></td>
                     <td className="px-3 py-2 font-mono text-xs">{b.batchNumber}</td>
                     <td className="px-3 py-2 text-xs"><span className={cx(b.expired ? 'font-medium text-red' : b.expiringSoon ? 'font-medium text-orange' : '')}>{date(b.expiryDate)}</span>{b.expired && <Badge accent="red">Expired</Badge>}{!b.expired && b.expiringSoon && <Badge accent="orange">Soon</Badge>}</td>
                     <td className="tnum px-3 py-2 text-right">{b.quantityOnHand}</td>
@@ -53,7 +54,7 @@ function Inner() {
                     <td className={cx('tnum px-3 py-2 text-right font-semibold', b.available <= 10 && 'text-orange')}>{b.available}{(b.expired || b.expiringSoon) && <span className="block whitespace-nowrap text-[11px] font-normal text-grey-500">On Shelf (Not Sellable): {b.onShelf ?? Math.max(0, b.quantityOnHand - b.quantityReserved)}</span>}</td>
                     <td className="tnum px-3 py-2 text-right">{money(b.mrpMinor)}</td>
                     <td className="tnum px-3 py-2 text-right">{money(b.sellingPriceMinor)}</td>
-                    <td className="px-3 py-2 text-right"><Button size="sm" variant="ghost" onClick={() => setAdding(b)}>Adjust</Button></td>
+                    <td className="px-3 py-2 text-right"><div className="flex items-center justify-end gap-1"><PhotoButton providerId={org.providerId} medicineId={b.medicine.id} owner={b.medicine.photoOwner ?? 'none'} /><Button size="sm" variant="ghost" onClick={() => setAdding(b)}>Adjust</Button></div></td>
                   </tr>
                 ))}
               </tbody>
@@ -61,17 +62,19 @@ function Inner() {
           </div>
         )}
       </Card>
-      {adding && <BatchDialog base={base} locations={locations} existing={adding === 'new' ? null : adding} onClose={() => setAdding(null)} />}
+      {adding && <BatchDialog base={base} providerId={org.providerId} locations={locations} existing={adding === 'new' ? null : adding} onClose={() => setAdding(null)} />}
     </div>
   );
 }
 
-function BatchDialog({ base, locations, existing, onClose }: { base: string; locations: Location[]; existing: Batch | null; onClose: () => void }) {
+function BatchDialog({ base, providerId, locations, existing, onClose }: { base: string; providerId: string; locations: Location[]; existing: Batch | null; onClose: () => void }) {
   const [mq, setMq] = useState('');
   const dmq = useDebounced(mq.trim(), 250);
   const meds = useGet<Medicine[]>(!existing && dmq.length >= 2 ? `/portal/catalogue/medicines?q=${encodeURIComponent(dmq)}&limit=20` : null);
   const [proposing, setProposing] = useState(false);
-  const [medicine, setMedicine] = useState<Medicine | null>(existing ? { id: existing.medicine.id, name: existing.medicine.name, genericName: null, strength: existing.medicine.strength, dosageForm: null, packSize: null, manufacturer: null, schedule: existing.medicine.schedule, requiresPrescription: existing.medicine.requiresPrescription } : null);
+  const [medicine, setMedicine] = useState<Medicine | null>(existing ? { id: existing.medicine.id, name: existing.medicine.name, genericName: null, strength: existing.medicine.strength, dosageForm: existing.medicine.dosageForm ?? null, packSize: null, manufacturer: null, schedule: existing.medicine.schedule, requiresPrescription: existing.medicine.requiresPrescription, imageUrl: existing.medicine.imageUrl ?? null } : null);
+  const [owner, setOwner] = useState<PhotoOwner>(existing?.medicine.photoOwner ?? 'none');
+  const choose = (m: Medicine) => { setMedicine(m); setOwner(photoOwnerOf(m, providerId)); setMq(''); };
   const [f, setF] = useState({ locationId: existing?.locationId ?? locations[0]?.id ?? '', batchNumber: existing?.batchNumber ?? '', expiryDate: existing?.expiryDate ?? '', quantityOnHand: existing ? String(existing.quantityOnHand) : '', mrp: existing ? String(existing.mrpMinor / 100) : '', price: existing ? String(existing.sellingPriceMinor / 100) : '' });
   const problems: Record<string, string> = {};
   if (!medicine) problems.medicine = 'Pick a medicine';
@@ -88,16 +91,17 @@ function BatchDialog({ base, locations, existing, onClose }: { base: string; loc
   return (
     <Dialog open onClose={onClose} title={existing ? 'Adjust Batch' : 'Add Batch'} description={existing ? `${existing.medicine.name} · batch ${existing.batchNumber}` : 'Enter the batch exactly as printed on the strip or box.'} icon={Pill} size="lg" footer={<><Button variant="ghost" onClick={onClose} disabled={save.isPending}>Cancel</Button><Button onClick={() => save.mutate()} loading={save.isPending} disabled={!valid}>{existing ? 'Save' : 'Add Batch'}</Button></>}>
       <div className="space-y-3">
+        {existing && medicine && <div className="flex items-center gap-3 rounded-lg border border-grey-200 px-3 py-2 text-sm"><MedicineLine m={medicine} /><span className="ml-auto"><PhotoButton providerId={providerId} medicineId={medicine.id} owner={owner} onSaved={(imageUrl) => { setMedicine({ ...medicine, imageUrl }); setOwner('mine'); }} /></span></div>}
         {!existing && (
           <Field label="Medicine" required error={mq && !medicine ? problems.medicine : undefined}>
-            {medicine ? <div className="flex items-center justify-between gap-2 rounded-lg border border-grey-200 px-3 py-2 text-sm"><MedicineLine m={medicine} /><button type="button" className="shrink-0 text-xs text-grey-500 underline-offset-2 hover:underline" onClick={() => setMedicine(null)}>Change</button></div> : (
+            {medicine ? <div className="flex items-center justify-between gap-2 rounded-lg border border-grey-200 px-3 py-2 text-sm"><MedicineLine m={medicine} /><PhotoButton providerId={providerId} medicineId={medicine.id} owner={owner} invalidate={['/portal/catalogue/medicines']} onSaved={(imageUrl) => { setMedicine({ ...medicine, imageUrl }); setOwner('mine'); }} /><button type="button" className="shrink-0 text-xs text-grey-500 underline-offset-2 hover:underline" onClick={() => setMedicine(null)}>Change</button></div> : (
               <div className="relative">
                 <Input role="combobox" aria-expanded={dmq.length >= 2} aria-controls="medicine-options" aria-label="Search Medicine" placeholder="Brand or composition, e.g. Dolo or Paracetamol" value={mq} onChange={(e) => setMq(e.target.value)} autoFocus />
                 {dmq.length >= 2 && (
                   <ul id="medicine-options" role="listbox" className="absolute inset-x-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-lg border border-grey-200 bg-paper py-1 text-sm shadow-[var(--shadow-float)]">
                     {meds.isPending ? <li className="px-3 py-2 text-grey-500">Searching…</li> : meds.isError ? <li className="px-3 py-2 text-red">Search failed; try again</li> : (
                       <>
-                        {(meds.data ?? []).map((m) => <li key={m.id} role="option" aria-selected={false}><button type="button" className="w-full px-3 py-2 text-left hover:bg-grey-50" onClick={() => { setMedicine(m); setMq(''); }}><MedicineLine m={m} /></button></li>)}
+                        {(meds.data ?? []).map((m) => <li key={m.id} role="option" aria-selected={false}><button type="button" className="w-full px-3 py-2 text-left hover:bg-grey-50" onClick={() => choose(m)}><MedicineLine m={m} /></button></li>)}
                         {!meds.data?.length && <li className="px-3 py-2 text-grey-500">No medicines match “{dmq}”</li>}
                         <li className="border-t border-grey-100"><button type="button" className="flex w-full items-center gap-2 px-3 py-2 text-left font-medium text-ink hover:bg-grey-50" onClick={() => setProposing(true)}><Plus size={14} aria-hidden /> Can&apos;t Find It? Add This Medicine</button></li>
                       </>
@@ -119,7 +123,7 @@ function BatchDialog({ base, locations, existing, onClose }: { base: string; loc
         </div>
         <p className="flex items-start gap-1.5 text-xs text-grey-500"><AlertTriangle size={12} className="mt-0.5 shrink-0 text-orange" aria-hidden /> Selling above MRP is an offence under the Drugs (Prices Control) Order; the platform refuses it.</p>
       </div>
-      {proposing && <AddMedicineDialog base={base} initialName={mq.trim()} onClose={() => setProposing(false)} onAdded={(m) => { setMedicine(m); setMq(''); setProposing(false); }} />}
+      {proposing && <AddMedicineDialog base={base} initialName={mq.trim()} onClose={() => setProposing(false)} onAdded={(m) => { choose(m); setProposing(false); }} />}
     </Dialog>
   );
 }
@@ -130,9 +134,12 @@ function MedicineLine({ m }: { m: Medicine }) {
   const head = [m.name, m.strength, m.dosageForm].filter(Boolean).join(' · ');
   const sub = [m.composition ?? m.genericName, m.manufacturer].filter(Boolean).join(' · ');
   return (
+    <span className="flex min-w-0 items-center gap-2">
+      <MedicineThumb imageUrl={m.imageUrl} dosageForm={m.dosageForm} name={m.name} size="sm" />
     <span className="block min-w-0">
       <span className="flex items-center gap-1.5"><span className="truncate font-medium">{head}</span>{m.requiresPrescription && <Badge accent="orange">Rx</Badge>}{m.source === 'PROVIDER' && <Badge>Pharmacy Added</Badge>}</span>
       {sub && <span className="block truncate text-xs text-grey-500">{sub}</span>}
+    </span>
     </span>
   );
 }
@@ -145,7 +152,7 @@ function AddMedicineDialog({ base, initialName, onClose, onAdded }: { base: stri
   if (!f.strength.trim()) problems.strength = 'Required, e.g. 500 mg';
   if (f.dosageForm.trim().length < 2) problems.dosageForm = 'Required, e.g. Tablet';
   const valid = Object.keys(problems).length === 0;
-  const save = useAction(async () => onAdded(await api.post<Medicine>(`${base}/medicines`, { ...f, manufacturer: f.manufacturer.trim() || undefined, packSize: f.packSize.trim() || undefined })), { success: 'Medicine added' });
+  const save = useAction(async () => onAdded((await api.post<{ data: Medicine }>(`${base}/medicines`, { ...f, manufacturer: f.manufacturer.trim() || undefined, packSize: f.packSize.trim() || undefined })).data), { success: 'Medicine added' });
   return (
     <Dialog open onClose={onClose} title="Add This Medicine" description="Copy the details exactly as printed on the pack. It becomes available to you and other pharmacies straight away." icon={Pill} footer={<><Button variant="ghost" onClick={onClose} disabled={save.isPending}>Cancel</Button><Button onClick={() => save.mutate()} loading={save.isPending} disabled={!valid}>Add Medicine</Button></>}>
       <div className="grid gap-3 sm:grid-cols-2">
